@@ -1,0 +1,65 @@
+#######################
+# Setting Constraints #
+#######################
+CREATE CONSTRAINT ON (u:User) ASSERT u.id IS UNIQUE; 
+CREATE CONSTRAINT ON (t:Team) ASSERT t.id IS UNIQUE; 
+CREATE CONSTRAINT ON (c:TeamChatSession) ASSERT c.id IS UNIQUE; 
+CREATE CONSTRAINT ON (i:ChatItem) ASSERT i.id IS UNIQUE; 
+
+################
+# Loading Data #
+################
+LOAD CSV FROM "file:/chat-data/chat_CREATE_team_chat.csv" AS row 
+MERGE (u:User {id: toInteger(row[0])})
+MERGE (t:Team {id: toInteger(row[1])}) 
+MERGE (c:TeamChatSession {id: toInteger(row[2])}) 
+MERGE (u)-[:CreatesSession{timeStamp: row[3]}]->(c) 
+MERGE (c)-[:OwnedBy{timeStamp: row[3]}]->(t)
+
+LOAD CSV FROM "file:/chat-data/chat_join_team_chat.csv" AS row 
+MERGE (u:User {id: toInteger(row[0])}) 
+MERGE (c:TeamChatSession {id: toInteger(row[1])}) 
+MERGE (u)-[:Join{timeStamp: row[2]}]->(c)
+
+LOAD CSV FROM "file:/chat-data/chat_leave_team_chat.csv" AS row 
+MERGE (u:User {id: toInteger(row[0])}) 
+MERGE (c:TeamChatSession {id: toInteger(row[1])}) 
+MERGE (u)-[:Leaves{timeStamp: row[2]}]->(c)
+
+LOAD CSV FROM "file:/chat-data/chat_item_team_chat.csv" AS row 
+MERGE (u:User {id: toInteger(row[0])}) 
+MERGE (c:TeamChatSession {id: toInteger(row[1])}) 
+MERGE (i:ChatItem {id: toInteger(row[2])}) 
+MERGE (u)-[:CreateChat{timeStamp: row[3]}]->(i)
+MERGE (i)-[:PartOf{timeStamp: row[3]}]->(c)
+
+LOAD CSV FROM "file:/chat-data/chat_mention_team_chat.csv" AS row 
+MERGE (i:ChatItem {id: toInteger(row[0])}) 
+MERGE (u:User {id: toInteger(row[1])}) 
+MERGE (i)-[:Mentioned{timeStamp: row[2]}]->(u)
+
+LOAD CSV FROM "file:/chat-data/chat_respond_team_chat.csv" AS row 
+MERGE (i:ChatItem {id: toInteger(row[0])}) 
+MERGE (j:ChatItem {id: toInteger(row[1])}) 
+MERGE (i)-[:ResponseTo{timeStamp: row[2]}]->(j)
+
+##############################################################
+
+MATCH p=(u:User)- [:CreateChat] - (i:ChatItem) - [:ResponseTo] -(i2:ChatItem) - [:PartOf] - (c:TeamChatSession) - [:OwnedBy] -> (t) 
+RETURN p LIMIT 200
+
+###############################################################
+
+MATCH p=(u:User)- [:CreateChat] - (i:ChatItem) - [:ResponseTo] -(i2:ChatItem) - [:PartOf] - (c:TeamChatSession) - [:OwnedBy] -> (t) 
+WHERE u.id in [ 352,1639, 881, 178, 412, 740, 208, 1471, 1525, 801 ]
+RETURN p 
+
+###############################################################
+
+MATCH p=(u:User)- [:CreateChat] - (i:ChatItem) - [:ResponseTo] -(i2:ChatItem) - [:PartOf] - (c:TeamChatSession) - [:OwnedBy] -> (t) 
+WHERE u.id in [ 178, 412, 740 ]
+RETURN p
+
+
+
+
